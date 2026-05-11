@@ -382,14 +382,22 @@ const Mic = () => {
       },
     });
 
-    textTl.to(words, {
-      yPercent: 0,
-      opacity: 1,
-      filter: 'blur(0px)',
-      stagger: 0.06,
-      duration: 0.55,
-      ease: 'power2.out',
-    });
+    textTl
+      .to(words, {
+        yPercent: 0,
+        opacity: 1,
+        filter: 'blur(0px)',
+        stagger: 0.06,
+        duration: 0.55,
+        ease: 'power2.out',
+      })
+      .to(container, {
+        opacity: 1,
+        filter: 'blur(0px) brightness(1)',
+        scale: 1,
+        duration: 0.7,
+        ease: 'power2.out',
+      }, '<');
 
     // Phase 2 — section is pinned. Mic dissolves in, then fades out as the
     // wave + new copy take over the same stage.
@@ -406,16 +414,9 @@ const Mic = () => {
     });
 
     micTl
-      // Mic materialises — mirror of its exit (blur + brightness + scale)
-      .to(container, {
-        opacity: 1,
-        filter: 'blur(0px) brightness(1)',
-        scale: 1,
-        duration: 0.7,
-        ease: 'power2.out',
-      })
-      // Hold so the user can take in the mic
-      .to({}, { duration: 0.6 })
+      // Mic + UCHWYĆ are already revealed during scroll-in (textTl).
+      // Pin starts with a hold so the user can take in the scene.
+      .to({}, { duration: 1.0 })
       // Mic + UCHWYĆ text exit; wave fades in at the same time
       .to(container, {
         opacity: 0,

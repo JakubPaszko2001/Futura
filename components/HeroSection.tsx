@@ -141,8 +141,8 @@ export default function HeroSection() {
   }, { scope: container });
 
   return (
-    <main 
-      ref={container} 
+    <main
+      ref={container}
       className="relative w-full bg-[#020205] text-white overflow-hidden"
       style={{ height: '100vh' }} // Tylko 100vh - kolejna sekcja będzie zaraz pod
     >
@@ -163,7 +163,7 @@ export default function HeroSection() {
               <p className="text-[10px] uppercase tracking-widest text-white/40">Creative Lab</p>
             </div>
             <div className="animate-reveal hidden md:block text-right font-mono text-[10px] text-white/30 uppercase tracking-widest">
-              Status: Active<br/>v.2.0.26
+              Status: Active<br />v.2.0.26
             </div>
           </header>
 
@@ -188,7 +188,7 @@ export default function HeroSection() {
               <div className="h-12 w-[1px] bg-gradient-to-b from-[#bc13fe] to-transparent" />
             </div>
             <div className="animate-reveal text-right font-mono text-[10px] text-white/20">
-              52.2297° N<br/>21.0122° E
+              52.2297° N<br />21.0122° E
             </div>
           </div>
         </section>

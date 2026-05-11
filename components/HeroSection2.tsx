@@ -132,15 +132,15 @@ export default function HeroSection() {
     const neonTl = gsap.timeline({ repeat: -1, repeatDelay: 3 });
     neonTl
       .to(logoRef.current, {
-        color:      "#bc13fe",
-        textShadow: "0 0 20px #bc13fe",
+        color:      "#8000ff",
+        textShadow: "0 0 20px #8000ff",
         duration:   0.05,
       })
       .to(logoRef.current, { opacity: 0.5, duration: 0.02 })
       .to(logoRef.current, { opacity: 1,   duration: 0.02 })
       .to(logoRef.current, {
-        color:      "#bc13fe",
-        textShadow: "0 0 0px #bc13fe",
+        color:      "#8000ff",
+        textShadow: "0 0 0px #8000ff",
         duration:   1.5,
         delay:      1,
       });
@@ -208,7 +208,7 @@ export default function HeroSection() {
               Futura
             </h1>
             {/* Podkreślenie hover */}
-            <div className="h-[1px] w-0 group-hover:w-full bg-[#bc13fe] transition-all duration-500" />
+            <div className="h-[1px] w-0 group-hover:w-full bg-[#8000ff] transition-all duration-500" />
             <p className="text-[8px] uppercase tracking-[0.3em] text-white/40 mt-1">
               Creative Lab
             </p>
@@ -234,7 +234,7 @@ export default function HeroSection() {
         {/* Footer */}
         <div className="flex justify-between items-end w-full">
           <div className="animate-reveal hidden lg:block max-w-[240px]">
-            <p className="text-[10px] uppercase tracking-widest text-white/40 leading-relaxed border-l border-[#bc13fe] pl-4">
+            <p className="text-[10px] uppercase tracking-widest text-white/40 leading-relaxed border-l border-[#8000ff] pl-4">
               Definiujemy na nowo przestrzeń dźwiękową poprzez fuzję technologii i emocji.
             </p>
           </div>
@@ -244,12 +244,12 @@ export default function HeroSection() {
             <span className="text-[9px] uppercase tracking-[0.5em] text-white/40 animate-bounce">
               Explore
             </span>
-            <div className="h-16 w-[1px] bg-gradient-to-b from-[#bc13fe] via-[#bc13fe]/50 to-transparent" />
+            <div className="h-16 w-[1px] bg-gradient-to-b from-[#8000ff] via-[#8000ff]/50 to-transparent" />
           </div>
 
           <div className="animate-reveal text-right font-mono text-[10px] text-white/20">
-            <p className="hover:text-[#bc13fe] transition-colors cursor-crosshair">LOC: 52.2297° N</p>
-            <p className="hover:text-[#bc13fe] transition-colors cursor-crosshair">CRD: 21.0122° E</p>
+            <p className="hover:text-[#8000ff] transition-colors cursor-crosshair">LOC: 52.2297° N</p>
+            <p className="hover:text-[#8000ff] transition-colors cursor-crosshair">CRD: 21.0122° E</p>
           </div>
         </div>
       </section>
@@ -260,17 +260,17 @@ export default function HeroSection() {
           cursor: crosshair;
         }
         .italic-outline {
-          -webkit-text-stroke: 1px #bc13fe;
+          -webkit-text-stroke: 1px #8000ff;
           color: transparent;
           transition: all 0.5s ease;
         }
         .italic-outline:hover {
-          color: #bc13fe;
+          color: #8000ff;
           -webkit-text-stroke: 1px transparent;
         }
         ::-webkit-scrollbar       { width: 3px; }
         ::-webkit-scrollbar-track { background: #121212; }
-        ::-webkit-scrollbar-thumb { background: #bc13fe; }
+        ::-webkit-scrollbar-thumb { background: #8000ff; }
       `}</style>
     </main>
   );
