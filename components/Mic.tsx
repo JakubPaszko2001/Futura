@@ -13,6 +13,10 @@ if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
 }
 
+// Speaker dev panel (Studio Config: position/scale/colour sliders + preview).
+// Disabled now that the speaker is positioned — flip to true to bring it back.
+const SHOW_CONFIG: boolean = false;
+
 const WAVE_CONFIG = {
   pointsCount: 200,
   width: 20,
@@ -84,7 +88,7 @@ const Mic = () => {
   const speakerContainerRef = useRef<HTMLDivElement>(null);
   const speakerTextRef = useRef<HTMLHeadingElement>(null);
   const pricingRef = useRef<HTMLDivElement>(null);
-  const [isUiHidden, setIsUiHidden] = useState(false);
+  const [isUiHidden, setIsUiHidden] = useState(true);   // config closed by default
   const [isSpeakerPreview, setIsSpeakerPreview] = useState(false);
 
   // UI state for controlled inputs — separate from live params
@@ -857,6 +861,8 @@ const Mic = () => {
         <PricingPanel />
       </div>
 
+      {SHOW_CONFIG && (
+      <>
       {/* Studio config — dev tool, desktop only (md+) */}
       <button
         onClick={() => setIsUiHidden((v) => !v)}
@@ -1028,6 +1034,8 @@ const Mic = () => {
           ))}
         </div>
       </div>
+      </>
+      )}
     </section>
   );
 };
