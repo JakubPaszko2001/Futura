@@ -7,6 +7,7 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import PricingPanel from './PricingPanel';
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
@@ -81,6 +82,7 @@ const Mic = () => {
   const text3Ref = useRef<HTMLHeadingElement>(null);
   const speakerContainerRef = useRef<HTMLDivElement>(null);
   const speakerTextRef = useRef<HTMLHeadingElement>(null);
+  const pricingRef = useRef<HTMLDivElement>(null);
   const [isUiHidden, setIsUiHidden] = useState(false);
   const [isSpeakerPreview, setIsSpeakerPreview] = useState(false);
 
@@ -553,6 +555,9 @@ const Mic = () => {
       filter: 'blur(20px) brightness(0.4)',
       scale: 0.92,
     });
+    // Cennik hidden until the speaker leaves. autoAlpha → visibility:hidden so
+    // it never intercepts clicks while the 3D phases play.
+    gsap.set(pricingRef.current, { autoAlpha: 0, filter: 'blur(20px)', yPercent: 5 });
 
     // Phase 1 — runs while the section is scrolling INTO view (no pin)
     const textTl = gsap.timeline({
@@ -589,7 +594,7 @@ const Mic = () => {
       scrollTrigger: {
         trigger: sectionRef.current,
         start: 'top top',
-        end: '+=700%',
+        end: '+=850%',
         scrub: 1,
         pin: true,
         anticipatePin: 1,
@@ -692,8 +697,16 @@ const Mic = () => {
         duration: 0.55,
         ease: 'power2.in',
       }, '<')
-      // Tiny tail so the pin releases cleanly into the next section.
-      .to({}, { duration: 0.4 });
+      // ── Cennik takes the same stage once the speaker is gone ──────────
+      .to(pricingRef.current, {
+        autoAlpha: 1,
+        filter: 'blur(0px)',
+        yPercent: 0,
+        duration: 0.8,
+        ease: 'power2.out',
+      })
+      // Long hold so the cennik stays put and the calendar can be used.
+      .to({}, { duration: 3 });
 
     // ── Render-loop gate ────────────────────────────────────────────────
     // Flip sectionActiveRef whenever the section enters/leaves the viewport.
@@ -836,6 +849,13 @@ const Mic = () => {
             </span>
           ))}
         </h1>
+      </div>
+
+      {/* Cennik — fills the section (100vh) and is revealed on the same pinned
+          stage once the speaker fades out. autoAlpha (visibility:hidden) keeps
+          it click-through until shown. */}
+      <div ref={pricingRef} className="absolute inset-0 z-[65] bg-black">
+        <PricingPanel />
       </div>
 
       <button

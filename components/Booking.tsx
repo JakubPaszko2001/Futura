@@ -56,34 +56,34 @@ export default function Booking() {
   };
 
   return (
-    <div className="w-full bg-white/[0.02] border border-white/10 rounded-2xl p-6 md:p-8 backdrop-blur-sm">
+    <div className="w-full bg-white/[0.02] border border-white/10 rounded-2xl p-4 md:p-5 backdrop-blur-sm">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
+      <div className="flex items-center gap-3 mb-4">
         <span className="inline-block w-2 h-2 rounded-full bg-[#8000ff] animate-pulse" />
-        <span className="font-mono text-[10px] uppercase tracking-[0.4em] text-white/40">
+        <span className="font-mono text-[9px] uppercase tracking-[0.4em] text-white/40">
           Rezerwacja studia
         </span>
       </div>
 
       {/* Month navigation */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-3">
         <button
           onClick={() => changeMonth(-1)}
           disabled={!canGoPrev}
-          className="w-9 h-9 flex items-center justify-center rounded-full border border-white/15 text-white/70 transition-all hover:border-[#8000ff] hover:text-[#8000ff] disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:border-white/15 disabled:hover:text-white/70"
+          className="w-7 h-7 flex items-center justify-center rounded-full border border-white/15 text-white/70 transition-all hover:border-[#8000ff] hover:text-[#8000ff] disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:border-white/15 disabled:hover:text-white/70"
           aria-label="Poprzedni miesiąc"
         >
           ‹
         </button>
         <div className="text-center">
-          <span className="text-base md:text-lg font-black uppercase tracking-tight">
+          <span className="text-sm md:text-base font-black uppercase tracking-tight">
             {MONTHS[view.getMonth()]}
           </span>
-          <span className="font-mono text-xs text-white/40 ml-2">{view.getFullYear()}</span>
+          <span className="font-mono text-[11px] text-white/40 ml-2">{view.getFullYear()}</span>
         </div>
         <button
           onClick={() => changeMonth(1)}
-          className="w-9 h-9 flex items-center justify-center rounded-full border border-white/15 text-white/70 transition-all hover:border-[#8000ff] hover:text-[#8000ff]"
+          className="w-7 h-7 flex items-center justify-center rounded-full border border-white/15 text-white/70 transition-all hover:border-[#8000ff] hover:text-[#8000ff]"
           aria-label="Następny miesiąc"
         >
           ›
@@ -91,9 +91,9 @@ export default function Booking() {
       </div>
 
       {/* Weekday labels */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 gap-1 mb-1">
         {WEEKDAYS.map((w) => (
-          <div key={w} className="text-center font-mono text-[10px] uppercase tracking-widest text-white/30 py-1">
+          <div key={w} className="text-center font-mono text-[9px] uppercase tracking-widest text-white/30">
             {w}
           </div>
         ))}
@@ -111,9 +111,9 @@ export default function Booking() {
               key={date.toISOString()}
               disabled={isPast}
               onClick={() => { setSelected(date); setConfirmed(false); }}
-              className={`aspect-square flex items-center justify-center rounded-lg text-sm font-bold transition-all
+              className={`h-8 flex items-center justify-center rounded-md text-[13px] font-bold transition-all
                 ${isSelected
-                  ? 'bg-[#8000ff] text-white shadow-[0_0_20px_rgba(128,0,255,0.5)]'
+                  ? 'bg-[#8000ff] text-white shadow-[0_0_15px_rgba(128,0,255,0.5)]'
                   : isPast
                     ? 'text-white/15 cursor-not-allowed'
                     : 'text-white/80 hover:bg-white/10 hover:text-white'}
@@ -126,19 +126,19 @@ export default function Booking() {
       </div>
 
       {/* Time + duration */}
-      <div className="mt-8 space-y-6">
+      <div className="mt-5 space-y-4">
         {/* Start hour */}
         <div>
-          <div className="flex justify-between font-mono text-[10px] uppercase tracking-[0.2em] text-white/40 mb-3">
+          <div className="flex justify-between font-mono text-[9px] uppercase tracking-[0.2em] text-white/40 mb-2">
             <span>Godzina startu</span>
             <span className="text-[#8000ff]">{pad(startHour)}:00</span>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {Array.from({ length: MAX_END - MIN_START }, (_, k) => MIN_START + k).map((h) => (
               <button
                 key={h}
                 onClick={() => handleStartChange(h)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-all
+                className={`px-2 py-1 rounded-md text-[11px] font-bold font-mono transition-all
                   ${h === startHour
                     ? 'bg-[#8000ff] text-white'
                     : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'}`}
@@ -151,25 +151,25 @@ export default function Booking() {
 
         {/* Duration stepper */}
         <div>
-          <div className="flex justify-between font-mono text-[10px] uppercase tracking-[0.2em] text-white/40 mb-3">
+          <div className="flex justify-between font-mono text-[9px] uppercase tracking-[0.2em] text-white/40 mb-2">
             <span>Liczba godzin</span>
             <span className="text-[#8000ff]">{clampedHours} h</span>
           </div>
           <div className="flex items-center gap-4">
             <button
               onClick={() => { setHours((h) => Math.max(1, h - 1)); setConfirmed(false); }}
-              className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 text-white/70 text-xl transition-all hover:border-[#8000ff] hover:text-[#8000ff]"
+              className="w-8 h-8 flex items-center justify-center rounded-full border border-white/15 text-white/70 text-lg transition-all hover:border-[#8000ff] hover:text-[#8000ff]"
               aria-label="Mniej godzin"
             >
               −
             </button>
-            <div className="flex-1 text-center text-2xl font-black tracking-tight">
-              {clampedHours}<span className="text-white/40 text-base ml-1">h</span>
+            <div className="flex-1 text-center text-xl font-black tracking-tight">
+              {clampedHours}<span className="text-white/40 text-sm ml-1">h</span>
             </div>
             <button
               onClick={() => { setHours((h) => Math.min(maxHours, h + 1)); setConfirmed(false); }}
               disabled={clampedHours >= maxHours}
-              className="w-10 h-10 flex items-center justify-center rounded-full border border-white/15 text-white/70 text-xl transition-all hover:border-[#8000ff] hover:text-[#8000ff] disabled:opacity-20 disabled:cursor-not-allowed"
+              className="w-8 h-8 flex items-center justify-center rounded-full border border-white/15 text-white/70 text-lg transition-all hover:border-[#8000ff] hover:text-[#8000ff] disabled:opacity-20 disabled:cursor-not-allowed"
               aria-label="Więcej godzin"
             >
               +
@@ -179,9 +179,9 @@ export default function Booking() {
       </div>
 
       {/* Summary + CTA */}
-      <div className="mt-8 pt-6 border-t border-white/10">
+      <div className="mt-5 pt-4 border-t border-white/10">
         {selected ? (
-          <div className="font-mono text-xs text-white/60 mb-5 leading-relaxed">
+          <div className="font-mono text-[11px] text-white/60 mb-4 leading-relaxed">
             <span className="text-white">
               {WEEKDAY_LONG[selected.getDay()]} {selected.getDate()} {MONTHS[selected.getMonth()].toLowerCase()} {selected.getFullYear()}
             </span>
@@ -189,7 +189,7 @@ export default function Booking() {
             {pad(startHour)}:00 – {pad(endHour)}:00 · {clampedHours} h · {clampedHours * 90} zł
           </div>
         ) : (
-          <p className="font-mono text-xs text-white/30 mb-5">
+          <p className="font-mono text-[11px] text-white/30 mb-4">
             Wybierz dzień z kalendarza, aby zarezerwować.
           </p>
         )}
@@ -197,7 +197,7 @@ export default function Booking() {
         <button
           onClick={() => selected && setConfirmed(true)}
           disabled={!selected}
-          className="w-full py-4 rounded-full text-[11px] font-black uppercase tracking-[0.3em] transition-all active:scale-[0.98]
+          className="w-full py-3 rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all active:scale-[0.98]
             bg-[#8000ff] text-white hover:shadow-[0_0_30px_rgba(128,0,255,0.5)]
             disabled:bg-white/10 disabled:text-white/30 disabled:cursor-not-allowed disabled:hover:shadow-none"
         >
@@ -205,7 +205,7 @@ export default function Booking() {
         </button>
 
         {confirmed && (
-          <p className="font-mono text-[10px] text-white/40 mt-4 text-center leading-relaxed">
+          <p className="font-mono text-[10px] text-white/40 mt-3 text-center leading-relaxed">
             Skontaktujemy się, aby potwierdzić rezerwację.
           </p>
         )}
