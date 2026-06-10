@@ -14,7 +14,7 @@ const SERVICES = [
 // driven by the parent (Mic) timeline.
 export default function PricingPanel() {
   return (
-    <div className="w-full h-full overflow-y-auto flex flex-col justify-center px-6 py-8 md:px-16">
+    <div className="w-full h-full overflow-y-auto flex flex-col justify-start lg:justify-center px-5 py-10 md:px-16">
       {/* Section label */}
       <div className="flex items-center gap-4 mb-5 md:mb-8 shrink-0">
         <span className="inline-block w-2 h-2 rounded-full bg-[#8000ff] animate-pulse" />
@@ -25,7 +25,7 @@ export default function PricingPanel() {
       </div>
 
       {/* Two halves: pricing (left 50%) · booking (right 50%) */}
-      <div className="flex flex-col lg:flex-row gap-8 lg:gap-14 items-center">
+      <div className="flex flex-col lg:flex-row gap-8 lg:gap-14 items-start lg:items-center">
         {/* ── Left 50%: Cennik ─────────────────────────────────────── */}
         <div className="w-full lg:w-1/2">
           <h2 className="text-[#8000ff] text-[12vw] md:text-[8vw] lg:text-[5.5vw] font-black uppercase tracking-tighter leading-[0.85] mb-6 md:mb-8">

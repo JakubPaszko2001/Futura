@@ -22,12 +22,11 @@ const heroVertex = `
   }
 `;
 
-const heroFragment = `
-  uniform float uProgress;
-  uniform vec2  uResolution;
-  uniform vec3  uColor;
-  uniform float uSpread;
-  varying vec2  vUv;
+// Noise-bake pass — runs ONCE (and on resize). The FBM is independent of
+// scroll progress, so there's no reason to recompute it every frame.
+const noiseFragment = `
+  uniform vec2 uResolution;
+  varying vec2 vUv;
 
   float Hash(vec2 p) {
     vec3 p2 = vec3(p.xy, 1.0);
@@ -54,13 +53,28 @@ const heroFragment = `
   }
 
   void main() {
-    vec2  uv          = vUv;
-    float aspect      = uResolution.x / uResolution.y;
-    vec2  centeredUv  = (uv - 0.5) * vec2(aspect, 1.0);
+    float aspect     = uResolution.x / uResolution.y;
+    vec2  centeredUv = (vUv - 0.5) * vec2(aspect, 1.0);
+    float n          = fbm(centeredUv * 15.0);
+    gl_FragColor     = vec4(vec3(n), 1.0);
+  }
+`;
+
+// Runtime dissolve pass — just samples the pre-baked noise. Cheap enough to
+// run on every scroll tick: one texture fetch + a smoothstep.
+const heroFragment = `
+  uniform float     uProgress;
+  uniform vec2      uResolution;
+  uniform vec3      uColor;
+  uniform float     uSpread;
+  uniform sampler2D uNoise;
+  varying vec2      vUv;
+
+  void main() {
+    float noiseValue   = texture2D(uNoise, vUv).r;
 
     /* Krawędź przesuwa się z dołu do góry wraz z postępem scrolla */
-    float dissolveEdge = uv.y - uProgress * 1.2;
-    float noiseValue   = fbm(centeredUv * 15.0);
+    float dissolveEdge = vUv.y - uProgress * 1.2;
     float d            = dissolveEdge + noiseValue * uSpread;
 
     float pixelSize    = 1.0 / uResolution.y;
@@ -92,20 +106,54 @@ export default function HeroSection() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
 
+    // ── Noise bake target (computed once, reused every frame) ───────────────
+    const noiseRT = new THREE.WebGLRenderTarget(1, 1, {
+      type:      THREE.HalfFloatType,  // smooth edge — avoids 8-bit banding
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      depthBuffer:   false,
+      stencilBuffer: false,
+    });
+
+    const bakeMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+      },
+      vertexShader:   heroVertex,
+      fragmentShader: noiseFragment,
+    });
+    const bakeScene = new THREE.Scene();
+    bakeScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bakeMaterial));
+
+    const geometry = new THREE.PlaneGeometry(2, 2);
+
     const material = new THREE.ShaderMaterial({
       uniforms: {
         uProgress:   { value: 0 },
         uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
         uColor:      { value: new THREE.Color('#000000') },
         uSpread:     { value: 0.5 },   // "szarpanie" krawędzi — zmień wg gustu
+        uNoise:      { value: noiseRT.texture },
       },
       vertexShader:   heroVertex,
       fragmentShader: heroFragment,
       transparent:    true,
     });
 
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+    const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
+
+    // Bakes the FBM noise into noiseRT at the current drawing-buffer resolution.
+    // Cheap one-off pass; re-run only when the viewport size/aspect changes.
+    const bakeNoise = () => {
+      const dbs = renderer.getDrawingBufferSize(new THREE.Vector2());
+      noiseRT.setSize(dbs.x, dbs.y);
+      bakeMaterial.uniforms.uResolution.value.set(window.innerWidth, window.innerHeight);
+      renderer.setRenderTarget(noiseRT);
+      renderer.render(bakeScene, camera);
+      renderer.setRenderTarget(null);
+    };
+    bakeNoise();
 
     // Pierwsze wyrenderowanie (bez scrolla overlay jest pełny — zakrywa tło)
     renderer.render(scene, camera);
@@ -158,12 +206,17 @@ export default function HeroSection() {
     const handleResize = () => {
       renderer.setSize(window.innerWidth, window.innerHeight);
       material.uniforms.uResolution.value.set(window.innerWidth, window.innerHeight);
+      bakeNoise();                 // aspect changed → re-bake the noise
       renderer.render(scene, camera);
     };
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      geometry.dispose();
+      material.dispose();
+      bakeMaterial.dispose();
+      noiseRT.dispose();
       renderer.dispose();
     };
   }, { scope: container });
@@ -225,7 +278,7 @@ export default function HeroSection() {
 
         {/* Główny tytuł */}
         <div className="max-w-5xl">
-          <h2 className="animate-reveal text-[13vw] font-bold leading-[0.85] uppercase tracking-tighter md:text-[6vw]">
+          <h2 className="animate-reveal text-[9.5vw] sm:text-[10vw] font-bold leading-[0.9] md:leading-[0.85] uppercase tracking-tighter md:text-[6vw]">
             Studio <br />
             <span className="italic-outline text-transparent italic">Muzyczne</span>
           </h2>
@@ -247,7 +300,7 @@ export default function HeroSection() {
             <div className="h-16 w-[1px] bg-gradient-to-b from-[#8000ff] via-[#8000ff]/50 to-transparent" />
           </div>
 
-          <div className="animate-reveal text-right font-mono text-[10px] text-white/20">
+          <div className="animate-reveal hidden md:block text-right font-mono text-[10px] text-white/20">
             <p className="hover:text-[#8000ff] transition-colors cursor-crosshair">LOC: 52.2297° N</p>
             <p className="hover:text-[#8000ff] transition-colors cursor-crosshair">CRD: 21.0122° E</p>
           </div>

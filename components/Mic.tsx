@@ -67,10 +67,11 @@ const SPEAKER_PARAMS: MicParams = {
   intensity: 2100,        // same as mic
   roughness: 0.25,        // same as mic
   metalness: 0.8,         // same as mic
-  posX: 0.0,
-  posY: 0.0,
+  posX: 0.9,    // przesunięty w prawo
+  posY: 0.3,
   posZ: 0.0,
   rotY: -0.38,
+  scale: 0.6,
 };
 
 const Mic = () => {
@@ -356,12 +357,10 @@ const Mic = () => {
       speakerModelRef.current = model;
       speakerScene.add(model);
 
-      // Point the orbit target at the model so preview orbiting feels right.
-      speakerControls.target.set(
-        speakerParamsRef.current.posX,
-        speakerParamsRef.current.posY,
-        speakerParamsRef.current.posZ,
-      );
+      // Keep the orbit target FIXED at the scene origin — NOT the model's posX.
+      // If it followed posX, update() would shift the camera with the model and
+      // posX would appear to do nothing on screen (code vs panel mismatch).
+      speakerControls.target.set(0, 0, 0);
       speakerControls.update();
 
       // Diagnostics — confirms the model loaded and how big it ended up.
@@ -800,10 +799,10 @@ const Mic = () => {
       />
 
       {/* "UCHWYĆ CZYSTY DŹWIĘK" — phase 1 text */}
-      <div className="absolute inset-0 z-[50] pointer-events-none select-none flex items-center justify-end pr-[10%]">
+      <div className="absolute inset-0 z-[50] pointer-events-none select-none flex items-center justify-center md:justify-end px-6 md:pl-0 md:pr-[10%]">
         <h1
           ref={textRef}
-          className="text-[#8000ff] text-[120px] md:text-[110px] font-black uppercase tracking-tighter leading-[1.1] text-center flex flex-col items-center will-change-transform"
+          className="text-[#8000ff] text-[14vw] sm:text-[12vw] md:text-[110px] font-black uppercase tracking-tighter leading-[1.05] md:leading-[1.1] text-center flex flex-col items-center will-change-transform"
         >
           {['UCHWYĆ', 'CZYSTY', 'DŹWIĘK'].map((w) => (
             <span key={w} className="block overflow-hidden pb-[0.08em]">
@@ -816,7 +815,7 @@ const Mic = () => {
       {/* "USŁYSZ WIĘCEJ SIEBIE" — phase 2 text (top-left) */}
       <h2
         ref={text2Ref}
-        className="absolute top-12 left-8 md:top-20 md:left-20 z-[55] text-[#8000ff] text-[34px] md:text-[56px] font-black uppercase tracking-tighter pointer-events-none select-none flex gap-x-3 will-change-transform"
+        className="absolute top-8 left-5 md:top-20 md:left-20 z-[55] text-[#8000ff] text-[22px] sm:text-[30px] md:text-[56px] font-black uppercase tracking-tighter pointer-events-none select-none flex flex-wrap gap-x-2 md:gap-x-3 will-change-transform"
       >
         {['USŁYSZ', 'WIĘCEJ', 'SIEBIE'].map((w) => (
           <span key={w} className="overflow-hidden pb-[0.12em]">
@@ -828,7 +827,7 @@ const Mic = () => {
       {/* "POCZUJ KAŻDY TON" — phase 2 text (bottom-right) */}
       <h2
         ref={text3Ref}
-        className="absolute bottom-12 right-8 md:bottom-20 md:right-20 z-[55] text-[#8000ff] text-[34px] md:text-[56px] font-black uppercase tracking-tighter pointer-events-none select-none flex gap-x-3 will-change-transform"
+        className="absolute bottom-8 right-5 md:bottom-20 md:right-20 z-[55] text-[#8000ff] text-[22px] sm:text-[30px] md:text-[56px] font-black uppercase tracking-tighter pointer-events-none select-none flex flex-wrap justify-end gap-x-2 md:gap-x-3 will-change-transform"
       >
         {['POCZUJ', 'KAŻDY', 'TON'].map((w) => (
           <span key={w} className="overflow-hidden pb-[0.12em]">
@@ -838,10 +837,10 @@ const Mic = () => {
       </h2>
 
       {/* "POCZUJ POTĘGĘ BASU" — speaker phase text (LEFT) */}
-      <div className="absolute inset-0 z-[60] pointer-events-none select-none flex items-center justify-start pl-[10%]">
+      <div className="absolute inset-0 z-[60] pointer-events-none select-none flex items-center justify-center md:justify-start px-6 md:pr-0 md:pl-[10%]">
         <h1
           ref={speakerTextRef}
-          className="text-[#8000ff] text-[120px] md:text-[110px] font-black uppercase tracking-tighter leading-[1.1] text-center flex flex-col items-center will-change-transform"
+          className="text-[#8000ff] text-[14vw] sm:text-[12vw] md:text-[110px] font-black uppercase tracking-tighter leading-[1.05] md:leading-[1.1] text-center flex flex-col items-center will-change-transform"
         >
           {['POCZUJ', 'POTĘGĘ', 'BASU'].map((w) => (
             <span key={w} className="block overflow-hidden pb-[0.08em]">
@@ -858,16 +857,17 @@ const Mic = () => {
         <PricingPanel />
       </div>
 
+      {/* Studio config — dev tool, desktop only (md+) */}
       <button
         onClick={() => setIsUiHidden((v) => !v)}
-        className="absolute top-5 right-5 z-[110] bg-white/10 backdrop-blur-md text-white border border-white/20 px-6 py-2 rounded-full text-[10px] uppercase tracking-[0.2em] hover:bg-white/30 transition-all active:scale-95"
+        className="hidden md:block absolute top-5 right-5 z-[110] bg-white/10 backdrop-blur-md text-white border border-white/20 px-6 py-2 rounded-full text-[10px] uppercase tracking-[0.2em] hover:bg-white/30 transition-all active:scale-95"
       >
         {isUiHidden ? 'Config' : 'Close'}
       </button>
 
       {/* Sidebar */}
       <div
-        className={`absolute top-0 right-0 h-full w-72 bg-black/90 backdrop-blur-3xl border-l border-white/10 p-8 z-[100] transition-transform duration-700 ease-in-out overflow-y-auto ${isUiHidden ? 'translate-x-full' : 'translate-x-0'
+        className={`hidden md:block absolute top-0 right-0 h-full w-72 bg-black/90 backdrop-blur-3xl border-l border-white/10 p-8 z-[100] transition-transform duration-700 ease-in-out overflow-y-auto ${isUiHidden ? 'translate-x-full' : 'translate-x-0'
           }`}
       >
         <h2 className="text-white text-[14px] font-light uppercase tracking-[0.3em] mb-10 mt-10 text-center">
