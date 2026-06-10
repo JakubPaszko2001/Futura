@@ -110,6 +110,8 @@ const Mic = () => {
   const speakerBaseScaleRef = useRef(1);
   const animFrameRef = useRef<number>(0);
   const dracoLoaderRef = useRef<DRACOLoader | null>(null);
+  // True while the section is anywhere in the viewport — gates the render loop.
+  const sectionActiveRef = useRef(true);
 
   // Sync UI state → live ref; apply reactive updates to the speaker scene/model.
   const updateSpeakerParams = useCallback((patch: Partial<MicParams>) => {
@@ -435,38 +437,56 @@ const Mic = () => {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    // Animation loop — reads refs, never stale. Drives all three scenes.
+    // A canvas is "visible" only when GSAP has its container opacity > ~0.
+    // CSS opacity:0 does NOT stop WebGL, so we gate the render calls ourselves.
+    const isVisible = (el: HTMLElement) => parseFloat(el.style.opacity || '1') > 0.001;
+
+    // Animation loop — reads refs, never stale. Drives all three scenes, but
+    // only renders the ones currently on screen (huge perf win — invisible
+    // scenes cost nothing). When the whole section is off-screen, it bails out
+    // before any work at all.
     const animate = () => {
       animFrameRef.current = requestAnimationFrame(animate);
 
-      if (currentModelRef.current) {
-        const targetY = paramsRef.current.rotY + mouseXRef.current * 0.4;
-        currentModelRef.current.rotation.y +=
-          (targetY - currentModelRef.current.rotation.y) * 0.01; // faster lerp
+      // Section scrolled out of view → render nothing.
+      if (!sectionActiveRef.current) return;
+
+      // ── Mic ──────────────────────────────────────────────────────────
+      if (isVisible(container)) {
+        if (currentModelRef.current) {
+          const targetY = paramsRef.current.rotY + mouseXRef.current * 0.4;
+          currentModelRef.current.rotation.y +=
+            (targetY - currentModelRef.current.rotation.y) * 0.01; // faster lerp
+        }
+        renderer.render(scene, camera);
       }
 
-      renderer.render(scene, camera);
-
-      // Speaker mirrors the mic's mouse-follow rotation — unless the user is
-      // hand-framing it with the preview orbit controls.
-      if (speakerControls.enabled) {
-        speakerControls.update();
-      } else if (speakerModelRef.current) {
-        const targetY = speakerParamsRef.current.rotY + mouseXRef.current * 0.4;
-        speakerModelRef.current.rotation.y +=
-          (targetY - speakerModelRef.current.rotation.y) * 0.01;
+      // ── Speaker ──────────────────────────────────────────────────────
+      // Always render while preview/orbit is active; otherwise only when shown.
+      if (speakerControls.enabled || isVisible(speakerContainer)) {
+        if (speakerControls.enabled) {
+          speakerControls.update();
+        } else if (speakerModelRef.current) {
+          const targetY = speakerParamsRef.current.rotY + mouseXRef.current * 0.4;
+          speakerModelRef.current.rotation.y +=
+            (targetY - speakerModelRef.current.rotation.y) * 0.01;
+        }
+        speakerRenderer.render(speakerScene, speakerCamera);
       }
-      speakerRenderer.render(speakerScene, speakerCamera);
 
-      // Decay the velocity each frame so amplitude eases back to 0 when
-      // the user stops scrolling, then lerp current amplitude toward target.
+      // ── Wave ─────────────────────────────────────────────────────────
+      // Decay velocity / lerp amplitude every active frame (cheap) so it never
+      // spikes on reveal, but only run the heavy geometry update + render when
+      // the wave is actually visible.
       smoothVelocity *= 0.94;
       const targetAmp = Math.min(smoothVelocity / 25, 120);
       waveState.amplitude += (targetAmp - waveState.amplitude) * 0.12;
-
       waveState.phase += 0.02;
-      updateWaves();
-      waveRenderer.render(waveScene, waveCamera);
+
+      if (isVisible(waveContainer)) {
+        updateWaves();
+        waveRenderer.render(waveScene, waveCamera);
+      }
     };
     animate();
 
@@ -675,7 +695,20 @@ const Mic = () => {
       // Tiny tail so the pin releases cleanly into the next section.
       .to({}, { duration: 0.4 });
 
+    // ── Render-loop gate ────────────────────────────────────────────────
+    // Flip sectionActiveRef whenever the section enters/leaves the viewport.
+    // While off-screen the rAF loop bails immediately (no WebGL work at all).
+    // Uses IntersectionObserver (NOT a ScrollTrigger) so the pin's spacer math
+    // can't confuse it — during the pin the section is fixed & covers the
+    // viewport, so it stays correctly "intersecting" the whole time.
+    const sectionIO = new IntersectionObserver(
+      (entries) => { sectionActiveRef.current = entries[0].isIntersecting; },
+      { threshold: 0 },
+    );
+    sectionIO.observe(sectionRef.current!);
+
     return () => {
+      sectionIO.disconnect();
       textTl.scrollTrigger?.kill();
       textTl.kill();
       micTl.scrollTrigger?.kill();
