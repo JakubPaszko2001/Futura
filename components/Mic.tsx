@@ -562,14 +562,17 @@ const Mic = () => {
     // it never intercepts clicks while the 3D phases play.
     gsap.set(pricingRef.current, { autoAlpha: 0, filter: 'blur(20px)', yPercent: 5 });
 
-    // Phase 1 — runs while the section is scrolling INTO view (no pin)
+    // Phase 1 — runs while the section is scrolling INTO view (no pin).
+    // scrub:true (no smoothing tail) so it never fights micTl over `container`
+    // opacity during fast scrolling — that tug-of-war could leave the mic stuck
+    // visible (its opaque scene then hides the wave behind it).
     const textTl = gsap.timeline({
       defaults: { ease: 'none' },
       scrollTrigger: {
         trigger: sectionRef.current,
         start: 'top 45%',        // section ~25% into view — slight delay
         end: 'top top+=5%',      // wraps just before it docks at the top
-        scrub: 1,
+        scrub: true,
       },
     });
 
@@ -862,179 +865,179 @@ const Mic = () => {
       </div>
 
       {SHOW_CONFIG && (
-      <>
-      {/* Studio config — dev tool, desktop only (md+) */}
-      <button
-        onClick={() => setIsUiHidden((v) => !v)}
-        className="hidden md:block absolute top-5 right-5 z-[110] bg-white/10 backdrop-blur-md text-white border border-white/20 px-6 py-2 rounded-full text-[10px] uppercase tracking-[0.2em] hover:bg-white/30 transition-all active:scale-95"
-      >
-        {isUiHidden ? 'Config' : 'Close'}
-      </button>
-
-      {/* Sidebar */}
-      <div
-        className={`hidden md:block absolute top-0 right-0 h-full w-72 bg-black/90 backdrop-blur-3xl border-l border-white/10 p-8 z-[100] transition-transform duration-700 ease-in-out overflow-y-auto ${isUiHidden ? 'translate-x-full' : 'translate-x-0'
-          }`}
-      >
-        <h2 className="text-white text-[14px] font-light uppercase tracking-[0.3em] mb-10 mt-10 text-center">
-          Studio Config
-        </h2>
-
-        <div className="space-y-6">
-          {/* Preview toggle — show the speaker without scrolling to its phase */}
+        <>
+          {/* Studio config — dev tool, desktop only (md+) */}
           <button
-            onClick={() => setIsSpeakerPreview((v) => !v)}
-            className={`w-full py-3 rounded-full text-[10px] uppercase tracking-[0.2em] border transition-all active:scale-95 ${isSpeakerPreview
-              ? 'bg-[#8000ff] text-white border-[#8000ff]'
-              : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
-              }`}
+            onClick={() => setIsUiHidden((v) => !v)}
+            className="hidden md:block absolute top-5 right-5 z-[110] bg-white/10 backdrop-blur-md text-white border border-white/20 px-6 py-2 rounded-full text-[10px] uppercase tracking-[0.2em] hover:bg-white/30 transition-all active:scale-95"
           >
-            {isSpeakerPreview ? 'Preview: ON' : 'Preview Speaker'}
+            {isUiHidden ? 'Config' : 'Close'}
           </button>
 
-          {/* speaker rotY */}
-          <div className="px-2">
-            <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
-              Rotation Base <span>{speakerUiParams.rotY.toFixed(2)}</span>
-            </div>
-            <input
-              type="range"
-              min={-Math.PI}
-              max={Math.PI}
-              step="0.001"
-              value={speakerUiParams.rotY}
-              onChange={(e) => updateSpeakerParams({ rotY: parseFloat(e.target.value) })}
-              className="w-full accent-white"
-            />
-          </div>
+          {/* Sidebar */}
+          <div
+            className={`hidden md:block absolute top-0 right-0 h-full w-72 bg-black/90 backdrop-blur-3xl border-l border-white/10 p-8 z-[100] transition-transform duration-700 ease-in-out overflow-y-auto ${isUiHidden ? 'translate-x-full' : 'translate-x-0'
+              }`}
+          >
+            <h2 className="text-white text-[14px] font-light uppercase tracking-[0.3em] mb-10 mt-10 text-center">
+              Studio Config
+            </h2>
 
-          {/* speaker posX */}
-          <div className="px-2">
-            <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
-              Position X <span>{speakerUiParams.posX.toFixed(2)}</span>
-            </div>
-            <input
-              type="range"
-              min={-15}
-              max={15}
-              step="0.01"
-              value={speakerUiParams.posX}
-              onChange={(e) => updateSpeakerParams({ posX: parseFloat(e.target.value) })}
-              className="w-full accent-white"
-            />
-          </div>
+            <div className="space-y-6">
+              {/* Preview toggle — show the speaker without scrolling to its phase */}
+              <button
+                onClick={() => setIsSpeakerPreview((v) => !v)}
+                className={`w-full py-3 rounded-full text-[10px] uppercase tracking-[0.2em] border transition-all active:scale-95 ${isSpeakerPreview
+                  ? 'bg-[#8000ff] text-white border-[#8000ff]'
+                  : 'bg-white/10 text-white border-white/20 hover:bg-white/20'
+                  }`}
+              >
+                {isSpeakerPreview ? 'Preview: ON' : 'Preview Speaker'}
+              </button>
 
-          {/* speaker posY */}
-          <div className="px-2">
-            <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
-              Position Y <span>{speakerUiParams.posY.toFixed(2)}</span>
-            </div>
-            <input
-              type="range"
-              min={-15}
-              max={15}
-              step="0.01"
-              value={speakerUiParams.posY}
-              onChange={(e) => updateSpeakerParams({ posY: parseFloat(e.target.value) })}
-              className="w-full accent-white"
-            />
-          </div>
+              {/* speaker rotY */}
+              <div className="px-2">
+                <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
+                  Rotation Base <span>{speakerUiParams.rotY.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={-Math.PI}
+                  max={Math.PI}
+                  step="0.001"
+                  value={speakerUiParams.rotY}
+                  onChange={(e) => updateSpeakerParams({ rotY: parseFloat(e.target.value) })}
+                  className="w-full accent-white"
+                />
+              </div>
 
-          {/* speaker posZ */}
-          <div className="px-2">
-            <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
-              Position Z <span>{speakerUiParams.posZ.toFixed(2)}</span>
-            </div>
-            <input
-              type="range"
-              min={-15}
-              max={15}
-              step="0.01"
-              value={speakerUiParams.posZ}
-              onChange={(e) => updateSpeakerParams({ posZ: parseFloat(e.target.value) })}
-              className="w-full accent-white"
-            />
-          </div>
+              {/* speaker posX */}
+              <div className="px-2">
+                <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
+                  Position X <span>{speakerUiParams.posX.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={-15}
+                  max={15}
+                  step="0.01"
+                  value={speakerUiParams.posX}
+                  onChange={(e) => updateSpeakerParams({ posX: parseFloat(e.target.value) })}
+                  className="w-full accent-white"
+                />
+              </div>
 
-          {/* speaker scale */}
-          <div className="px-2">
-            <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
-              Scale <span>{speakerUiParams.scale.toFixed(2)}</span>
-            </div>
-            <input
-              type="range"
-              min={0.05}
-              max={20}
-              step="0.01"
-              value={speakerUiParams.scale}
-              onChange={(e) => updateSpeakerParams({ scale: parseFloat(e.target.value) })}
-              className="w-full accent-white"
-            />
-          </div>
+              {/* speaker posY */}
+              <div className="px-2">
+                <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
+                  Position Y <span>{speakerUiParams.posY.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={-15}
+                  max={15}
+                  step="0.01"
+                  value={speakerUiParams.posY}
+                  onChange={(e) => updateSpeakerParams({ posY: parseFloat(e.target.value) })}
+                  className="w-full accent-white"
+                />
+              </div>
 
-          {/* speaker intensity */}
-          <div className="px-2">
-            <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
-              Light Intensity <span>{speakerUiParams.intensity}</span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={5000}
-              step="10"
-              value={speakerUiParams.intensity}
-              onChange={(e) => updateSpeakerParams({ intensity: parseFloat(e.target.value) })}
-              className="w-full accent-white"
-            />
-          </div>
+              {/* speaker posZ */}
+              <div className="px-2">
+                <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
+                  Position Z <span>{speakerUiParams.posZ.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={-15}
+                  max={15}
+                  step="0.01"
+                  value={speakerUiParams.posZ}
+                  onChange={(e) => updateSpeakerParams({ posZ: parseFloat(e.target.value) })}
+                  className="w-full accent-white"
+                />
+              </div>
 
-          {/* speaker roughness */}
-          <div className="px-2">
-            <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
-              Roughness <span>{speakerUiParams.roughness.toFixed(2)}</span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step="0.01"
-              value={speakerUiParams.roughness}
-              onChange={(e) => updateSpeakerParams({ roughness: parseFloat(e.target.value) })}
-              className="w-full accent-white"
-            />
-          </div>
+              {/* speaker scale */}
+              <div className="px-2">
+                <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
+                  Scale <span>{speakerUiParams.scale.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0.05}
+                  max={20}
+                  step="0.01"
+                  value={speakerUiParams.scale}
+                  onChange={(e) => updateSpeakerParams({ scale: parseFloat(e.target.value) })}
+                  className="w-full accent-white"
+                />
+              </div>
 
-          {/* speaker metalness */}
-          <div className="px-2">
-            <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
-              Metalness <span>{speakerUiParams.metalness.toFixed(2)}</span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step="0.01"
-              value={speakerUiParams.metalness}
-              onChange={(e) => updateSpeakerParams({ metalness: parseFloat(e.target.value) })}
-              className="w-full accent-white"
-            />
-          </div>
+              {/* speaker intensity */}
+              <div className="px-2">
+                <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
+                  Light Intensity <span>{speakerUiParams.intensity}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={5000}
+                  step="10"
+                  value={speakerUiParams.intensity}
+                  onChange={(e) => updateSpeakerParams({ intensity: parseFloat(e.target.value) })}
+                  className="w-full accent-white"
+                />
+              </div>
 
-          {/* speaker Colors */}
-          {(['mainColor', 'sideColor', 'micColor', 'ambientColor'] as const).map((key) => (
-            <div key={`spk-${key}`} className="px-2 flex items-center justify-between">
-              <span className="text-[9px] text-white/40 font-mono uppercase">{key}</span>
-              <input
-                type="color"
-                value={speakerUiParams[key]}
-                onChange={(e) => updateSpeakerParams({ [key]: e.target.value })}
-                className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
-              />
+              {/* speaker roughness */}
+              <div className="px-2">
+                <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
+                  Roughness <span>{speakerUiParams.roughness.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step="0.01"
+                  value={speakerUiParams.roughness}
+                  onChange={(e) => updateSpeakerParams({ roughness: parseFloat(e.target.value) })}
+                  className="w-full accent-white"
+                />
+              </div>
+
+              {/* speaker metalness */}
+              <div className="px-2">
+                <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
+                  Metalness <span>{speakerUiParams.metalness.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step="0.01"
+                  value={speakerUiParams.metalness}
+                  onChange={(e) => updateSpeakerParams({ metalness: parseFloat(e.target.value) })}
+                  className="w-full accent-white"
+                />
+              </div>
+
+              {/* speaker Colors */}
+              {(['mainColor', 'sideColor', 'micColor', 'ambientColor'] as const).map((key) => (
+                <div key={`spk-${key}`} className="px-2 flex items-center justify-between">
+                  <span className="text-[9px] text-white/40 font-mono uppercase">{key}</span>
+                  <input
+                    type="color"
+                    value={speakerUiParams[key]}
+                    onChange={(e) => updateSpeakerParams({ [key]: e.target.value })}
+                    className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
-      </>
+          </div>
+        </>
       )}
     </section>
   );
