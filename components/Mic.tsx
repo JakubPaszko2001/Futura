@@ -209,8 +209,9 @@ const Mic = () => {
     sceneRef.current = scene;
 
     // Camera
+    const isMobileInit = container.clientWidth < 768;
     const camera = new THREE.PerspectiveCamera(
-      p.fov,
+      isMobileInit ? 38 : p.fov,
       container.clientWidth / container.clientHeight,
       0.1,
       1000,
@@ -269,7 +270,12 @@ const Mic = () => {
       baseScaleRef.current = base;
       model.scale.setScalar(base * paramsRef.current.scale);
 
-      model.position.set(paramsRef.current.posX, paramsRef.current.posY, paramsRef.current.posZ);
+      const isMobMic = container.clientWidth < 768;
+      model.position.set(
+        isMobMic ? 0 : paramsRef.current.posX,
+        isMobMic ? -2.0 : paramsRef.current.posY,
+        paramsRef.current.posZ,
+      );
       model.rotation.y = paramsRef.current.rotY;
 
       // Apply materials
@@ -296,7 +302,7 @@ const Mic = () => {
 
     const sp = speakerParamsRef.current;
     const speakerCamera = new THREE.PerspectiveCamera(
-      sp.fov,
+      isMobileInit ? 38 : sp.fov,
       speakerContainer.clientWidth / speakerContainer.clientHeight,
       0.1,
       1000,
@@ -343,8 +349,13 @@ const Mic = () => {
       speakerBaseScaleRef.current = base;
       model.scale.setScalar(base * speakerParamsRef.current.scale);
 
-      model.position.set(speakerParamsRef.current.posX, speakerParamsRef.current.posY, speakerParamsRef.current.posZ);
-      model.rotation.y = speakerParamsRef.current.rotY;
+      const isMobSpk = container.clientWidth < 768;
+      model.position.set(
+        isMobSpk ? -0.2 : speakerParamsRef.current.posX,
+        isMobSpk ? 0.5 : speakerParamsRef.current.posY,
+        speakerParamsRef.current.posZ,
+      );
+      model.rotation.y = isMobSpk ? 0.65 : speakerParamsRef.current.rotY;
 
       model.traverse((child) => {
         const mesh = child as THREE.Mesh;
@@ -406,16 +417,24 @@ const Mic = () => {
     });
 
     const updateWaves = () => {
+      const isPortrait = waveContainer.clientWidth < waveContainer.clientHeight;
+      const span = isPortrait
+        ? (waveContainer.clientHeight / waveContainer.clientWidth) * WAVE_CONFIG.width
+        : WAVE_CONFIG.width;
       waveLines.forEach((w) => {
         const pos = w.positions;
         for (let i = 0; i < WAVE_CONFIG.pointsCount; i++) {
           const t = i / (WAVE_CONFIG.pointsCount - 1);
-          const x = (t - 0.5) * WAVE_CONFIG.width;
           const mask = Math.sin(t * Math.PI);
           const angle = i * (w.freq * 0.1) + waveState.phase + w.phaseOffset;
-          const y = Math.sin(angle) * (waveState.amplitude * 0.05 * w.ampMult * mask);
-          pos[i * 3] = x;
-          pos[i * 3 + 1] = y;
+          const displacement = Math.sin(angle) * (waveState.amplitude * 0.05 * w.ampMult * mask);
+          if (isPortrait) {
+            pos[i * 3] = displacement;
+            pos[i * 3 + 1] = (t - 0.5) * span;
+          } else {
+            pos[i * 3] = (t - 0.5) * span;
+            pos[i * 3 + 1] = displacement;
+          }
           pos[i * 3 + 2] = 0;
         }
         w.geometry.attributes.position.needsUpdate = true;
@@ -472,7 +491,9 @@ const Mic = () => {
         if (speakerControls.enabled) {
           speakerControls.update();
         } else if (speakerModelRef.current) {
-          const targetY = speakerParamsRef.current.rotY + mouseXRef.current * 0.4;
+          const isMobSpkAnim = speakerContainer.clientWidth < 768;
+          const baseRotY = isMobSpkAnim ? 0.65 : speakerParamsRef.current.rotY;
+          const targetY = baseRotY + mouseXRef.current * 0.4;
           speakerModelRef.current.rotation.y +=
             (targetY - speakerModelRef.current.rotation.y) * 0.01;
         }
@@ -500,13 +521,17 @@ const Mic = () => {
       if (!container) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
+      const isMobile = w < 768;
+
       camera.aspect = w / h;
+      camera.fov = isMobile ? 38 : paramsRef.current.fov;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
 
       const sw = speakerContainer.clientWidth;
       const sh = speakerContainer.clientHeight;
       speakerCamera.aspect = sw / sh;
+      speakerCamera.fov = isMobile ? 38 : speakerParamsRef.current.fov;
       speakerCamera.updateProjectionMatrix();
       speakerRenderer.setSize(sw, sh);
 
@@ -515,6 +540,24 @@ const Mic = () => {
       waveCamera.aspect = ww / wh;
       waveCamera.updateProjectionMatrix();
       waveRenderer.setSize(ww, wh);
+
+      if (currentModelRef.current) {
+        const p = paramsRef.current;
+        currentModelRef.current.position.set(
+          isMobile ? 0 : p.posX,
+          isMobile ? -2.0 : p.posY,
+          p.posZ,
+        );
+      }
+      if (speakerModelRef.current) {
+        const sp = speakerParamsRef.current;
+        speakerModelRef.current.position.set(
+          isMobile ? -0.4 : sp.posX,
+          isMobile ? 1.4 : sp.posY,
+          sp.posZ,
+        );
+        if (isMobile) speakerModelRef.current.rotation.y = 0.65;
+      }
     });
     ro.observe(container);
 
@@ -789,7 +832,7 @@ const Mic = () => {
   return (
     <section ref={sectionRef} className="relative h-screen w-full bg-black overflow-hidden">
       {/* Wave canvas — bottom layer, becomes visible when mic fades out */}
-      <div ref={waveContainerRef} className="absolute inset-0 z-[5]" />
+      <div ref={waveContainerRef} className="absolute z-[5] left-0 right-0 top-[10%] h-[80%] md:inset-0 md:top-auto md:h-auto" />
 
       {/* Mic canvas — sits above the wave */}
       <div
@@ -822,7 +865,7 @@ const Mic = () => {
       {/* "USŁYSZ WIĘCEJ SIEBIE" — phase 2 text (top-left) */}
       <h2
         ref={text2Ref}
-        className="absolute top-8 left-5 md:top-20 md:left-20 z-[55] text-[#8000ff] text-[22px] sm:text-[30px] md:text-[56px] font-black uppercase tracking-tighter pointer-events-none select-none flex flex-wrap gap-x-2 md:gap-x-3 will-change-transform"
+        className="absolute top-8 left-0 right-0 px-5 md:top-20 md:left-20 md:right-auto md:px-0 z-[55] text-[#8000ff] text-[5vw] sm:text-[30px] md:text-[56px] font-black uppercase tracking-tighter pointer-events-none select-none flex flex-nowrap justify-center md:justify-start gap-x-2 md:gap-x-3 will-change-transform"
       >
         {['USŁYSZ', 'WIĘCEJ', 'SIEBIE'].map((w) => (
           <span key={w} className="overflow-hidden pb-[0.12em]">
@@ -834,7 +877,7 @@ const Mic = () => {
       {/* "POCZUJ KAŻDY TON" — phase 2 text (bottom-right) */}
       <h2
         ref={text3Ref}
-        className="absolute bottom-8 right-5 md:bottom-20 md:right-20 z-[55] text-[#8000ff] text-[22px] sm:text-[30px] md:text-[56px] font-black uppercase tracking-tighter pointer-events-none select-none flex flex-wrap justify-end gap-x-2 md:gap-x-3 will-change-transform"
+        className="absolute bottom-8 left-0 right-0 px-5 md:bottom-20 md:right-20 md:left-auto md:px-0 z-[55] text-[#8000ff] text-[5vw] sm:text-[30px] md:text-[56px] font-black uppercase tracking-tighter pointer-events-none select-none flex flex-nowrap justify-center md:justify-end gap-x-2 md:gap-x-3 will-change-transform"
       >
         {['POCZUJ', 'KAŻDY', 'TON'].map((w) => (
           <span key={w} className="overflow-hidden pb-[0.12em]">
@@ -843,8 +886,8 @@ const Mic = () => {
         ))}
       </h2>
 
-      {/* "POCZUJ POTĘGĘ BASU" — speaker phase text (LEFT) */}
-      <div className="absolute inset-0 z-[60] pointer-events-none select-none flex items-center justify-center md:justify-start px-6 md:pr-0 md:pl-[10%]">
+      {/* "POCZUJ POTĘGĘ BASU" — speaker phase text (bottom on mobile, left on desktop) */}
+      <div className="absolute inset-0 z-[60] pointer-events-none select-none flex items-end md:items-center justify-center md:justify-start pb-14 md:pb-0 px-6 md:pr-0 md:pl-[10%]">
         <h1
           ref={speakerTextRef}
           className="text-[#8000ff] text-[14vw] sm:text-[12vw] md:text-[110px] font-black uppercase tracking-tighter leading-[1.05] md:leading-[1.1] text-center flex flex-col items-center will-change-transform"

@@ -9,7 +9,7 @@ const STOPS = [
   { id: 'start', label: 'Start', frac: 0 },
   { id: 'mic', label: 'Nagrania', frac: 0.03 },
   { id: 'wave', label: 'Fala', frac: 0.35 },     // oba napisy już w pełni widoczne
-  { id: 'speaker', label: 'Dźwięk', frac: 0.52 }, // cały napis POCZUJ POTĘGĘ BASU odsłonięty
+  { id: 'speaker', label: 'Dźwięk', frac: 0.56 }, // cały napis POCZUJ POTĘGĘ BASU odsłonięty
   { id: 'cennik', label: 'Cennik', frac: 0.85 },
 ] as const;
 
