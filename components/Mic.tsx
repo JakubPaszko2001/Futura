@@ -272,8 +272,8 @@ const Mic = () => {
 
       const isMobMic = container.clientWidth < 768;
       model.position.set(
-        isMobMic ? 0 : paramsRef.current.posX,
-        isMobMic ? -2.0 : paramsRef.current.posY,
+        isMobMic ? 1.2 : paramsRef.current.posX,
+        isMobMic ? -1.8 : paramsRef.current.posY,
         paramsRef.current.posZ,
       );
       model.rotation.y = paramsRef.current.rotY;
@@ -343,7 +343,6 @@ const Mic = () => {
       const center = box.getCenter(new THREE.Vector3());
       const size = box.getSize(new THREE.Vector3());
       model.position.sub(center);
-
       const maxDim = Math.max(size.x, size.y, size.z);
       const base = maxDim > 0 ? 4 / maxDim : 1;
       speakerBaseScaleRef.current = base;
@@ -352,7 +351,7 @@ const Mic = () => {
       const isMobSpk = container.clientWidth < 768;
       model.position.set(
         isMobSpk ? -0.2 : speakerParamsRef.current.posX,
-        isMobSpk ? 0.5 : speakerParamsRef.current.posY,
+        isMobSpk ? 1 : speakerParamsRef.current.posY,
         speakerParamsRef.current.posZ,
       );
       model.rotation.y = isMobSpk ? 0.65 : speakerParamsRef.current.rotY;
@@ -544,8 +543,8 @@ const Mic = () => {
       if (currentModelRef.current) {
         const p = paramsRef.current;
         currentModelRef.current.position.set(
-          isMobile ? 0 : p.posX,
-          isMobile ? -2.0 : p.posY,
+          isMobile ? 1.2 : p.posX,
+          isMobile ? -1.8 : p.posY,
           p.posZ,
         );
       }
@@ -581,6 +580,7 @@ const Mic = () => {
       yPercent: 115,
       skewY: 6,
       filter: 'blur(8px)',
+      opacity: 0,
     });
     // Speaker headline (left) starts dropped from above like UCHWYĆ
     gsap.set(words4, {
@@ -680,6 +680,7 @@ const Mic = () => {
         yPercent: 0,
         skewY: 0,
         filter: 'blur(0px)',
+        opacity: 1,
         stagger: 0.15,
         duration: 0.6,
         ease: 'power3.out',
@@ -689,6 +690,7 @@ const Mic = () => {
         yPercent: 0,
         skewY: 0,
         filter: 'blur(0px)',
+        opacity: 1,
         stagger: 0.15,
         duration: 0.6,
         ease: 'power3.out',
@@ -705,6 +707,7 @@ const Mic = () => {
         yPercent: 115,
         skewY: 6,
         filter: 'blur(8px)',
+        opacity: 0,
         stagger: 0.06,
         duration: 0.55,
         ease: 'power2.in',
@@ -849,7 +852,7 @@ const Mic = () => {
       />
 
       {/* "UCHWYĆ CZYSTY DŹWIĘK" — phase 1 text */}
-      <div className="absolute inset-0 z-[50] pointer-events-none select-none flex items-center justify-center md:justify-end px-6 md:pl-0 md:pr-[10%]">
+      <div className="absolute inset-0 z-[50] pointer-events-none select-none flex items-start md:items-center justify-center md:justify-end pt-14 md:pt-0 px-6 md:pl-0 md:pr-[10%]">
         <h1
           ref={textRef}
           className="text-[#8000ff] text-[14vw] sm:text-[12vw] md:text-[110px] font-black uppercase tracking-tighter leading-[1.05] md:leading-[1.1] text-center flex flex-col items-center will-change-transform"
