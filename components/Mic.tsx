@@ -84,11 +84,11 @@ const SPEAKER_PARAMS_MOBILE: MicParams = {
   sideColor: '#8000ff',
   ambientColor: '#222222',
   micColor: '#3b3b3b',
-  posX: -0.2,
-  posY: 1.0,
+  posX: -2.9,
+  posY: 0,
   posZ: 0.0,
-  rotY: 0.65,
-  scale: 0.6,
+  rotY: 0.4,
+  scale: 1.4,
 };
 
 // Speaker shares the mic's look. Starts centred at the orbit target so it is
