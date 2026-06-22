@@ -87,7 +87,7 @@ const SPEAKER_PARAMS_MOBILE: MicParams = {
   posX: -2.75,
   posY: 0.2,
   posZ: 0.0,
-  rotY: 0.5,
+  rotY: 0.6,
   scale: 1.4,
 };
 
