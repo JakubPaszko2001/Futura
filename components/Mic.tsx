@@ -906,7 +906,7 @@ const Mic = () => {
   }, []); // ← empty deps: scene built once, never rebuilt
 
   return (
-    <section ref={sectionRef} className="relative h-[100svh] w-full bg-black overflow-hidden">
+    <section ref={sectionRef} className="relative h-screen w-full bg-black overflow-hidden">
       {/* Wave canvas — bottom layer, becomes visible when mic fades out */}
       <div ref={waveContainerRef} className="absolute z-[5] left-0 right-0 top-[10%] h-[80%] md:inset-0 md:h-full" />
 
