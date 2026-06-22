@@ -75,6 +75,22 @@ const DEFAULT_PARAMS_MOBILE: MicParams = {
   scale: 1.3,
 };
 
+const SPEAKER_PARAMS_MOBILE: MicParams = {
+  fov: 38,
+  intensity: 2100,
+  roughness: 0.25,
+  metalness: 0.8,
+  mainColor: '#8000ff',
+  sideColor: '#8000ff',
+  ambientColor: '#222222',
+  micColor: '#3b3b3b',
+  posX: -0.2,
+  posY: 1.0,
+  posZ: 0.0,
+  rotY: 0.65,
+  scale: 0.6,
+};
+
 // Speaker shares the mic's look. Starts centred at the orbit target so it is
 // guaranteed to be in frame — fine-tune position/scale from the panel.
 // Colours/material/lighting are kept identical to the mic on purpose.
@@ -111,11 +127,13 @@ const Mic = () => {
   // UI state for controlled inputs — separate from live params
   const [speakerUiParams, setSpeakerUiParams] = useState<MicParams>(SPEAKER_PARAMS);
   const [micMobileUiParams, setMicMobileUiParams] = useState<MicParams>(DEFAULT_PARAMS_MOBILE);
+  const [speakerMobileUiParams, setSpeakerMobileUiParams] = useState<MicParams>(SPEAKER_PARAMS_MOBILE);
 
   // Live refs — read inside rAF without stale closures, zero re-renders
   const paramsRef = useRef<MicParams>(DEFAULT_PARAMS);
   const speakerParamsRef = useRef<MicParams>(SPEAKER_PARAMS);
   const micMobileParamsRef = useRef<MicParams>(DEFAULT_PARAMS_MOBILE);
+  const speakerMobileParamsRef = useRef<MicParams>(SPEAKER_PARAMS_MOBILE);
   const mouseXRef = useRef(0);
 
   // Three.js object refs
@@ -226,18 +244,58 @@ const Mic = () => {
     }
   }, []);
 
+  const updateSpeakerMobileParams = useCallback((patch: Partial<MicParams>) => {
+    const next = { ...speakerMobileParamsRef.current, ...patch };
+    speakerMobileParamsRef.current = next;
+    setSpeakerMobileUiParams(next);
+
+    const p = next;
+    if (spkMainLightRef.current) {
+      spkMainLightRef.current.intensity = p.intensity;
+      spkMainLightRef.current.color.set(p.mainColor);
+    }
+    if (spkSideLightRef.current) {
+      spkSideLightRef.current.intensity = p.intensity;
+      spkSideLightRef.current.color.set(p.sideColor);
+    }
+    if (spkAmbientLightRef.current) {
+      spkAmbientLightRef.current.color.set(p.ambientColor);
+    }
+    if (speakerCameraRef.current && patch.fov !== undefined) {
+      speakerCameraRef.current.fov = p.fov;
+      speakerCameraRef.current.updateProjectionMatrix();
+    }
+    if (speakerModelRef.current) {
+      if (patch.posX !== undefined || patch.posY !== undefined || patch.posZ !== undefined) {
+        speakerModelRef.current.position.set(p.posX, p.posY, p.posZ);
+      }
+      if (patch.scale !== undefined) {
+        speakerModelRef.current.scale.setScalar(speakerBaseScaleRef.current * p.scale);
+      }
+      if (patch.rotY !== undefined) {
+        speakerModelRef.current.rotation.y = p.rotY;
+      }
+      if (patch.micColor !== undefined || patch.roughness !== undefined || patch.metalness !== undefined) {
+        speakerModelRef.current.traverse((child) => {
+          const mesh = child as THREE.Mesh;
+          if (mesh.isMesh) {
+            const mat = mesh.material as THREE.MeshStandardMaterial;
+            mat.color.set(p.micColor);
+            mat.roughness = p.roughness;
+            mat.metalness = p.metalness;
+          }
+        });
+      }
+    }
+  }, []);
+
   // Preview mode — force the speaker canvas fully visible & on top so it can
   // be positioned with the panel without scrolling to its timeline phase.
   useEffect(() => {
     const el = speakerContainerRef.current;
     if (!el) return;
     if (isSpeakerPreview) {
-      gsap.set(el, {
-        opacity: 1,
-        filter: 'blur(0px) brightness(1)',
-        scale: 1,
-        zIndex: 80,
-      });
+      gsap.set(el, { opacity: 1, scale: 1, zIndex: 80 });
       el.style.pointerEvents = 'auto';        // let OrbitControls grab the mouse
       if (speakerControlsRef.current) speakerControlsRef.current.enabled = true;
     } else {
@@ -407,15 +465,12 @@ const Mic = () => {
       const maxDim = Math.max(size.x, size.y, size.z);
       const base = maxDim > 0 ? 4 / maxDim : 1;
       speakerBaseScaleRef.current = base;
-      model.scale.setScalar(base * speakerParamsRef.current.scale);
 
       const isMobSpk = container.clientWidth < 768;
-      model.position.set(
-        isMobSpk ? -0.2 : speakerParamsRef.current.posX,
-        isMobSpk ? 1 : speakerParamsRef.current.posY,
-        speakerParamsRef.current.posZ,
-      );
-      model.rotation.y = isMobSpk ? 0.65 : speakerParamsRef.current.rotY;
+      const spkInitParams = isMobSpk ? speakerMobileParamsRef.current : speakerParamsRef.current;
+      model.scale.setScalar(base * spkInitParams.scale);
+      model.position.set(spkInitParams.posX, spkInitParams.posY, spkInitParams.posZ);
+      model.rotation.y = spkInitParams.rotY;
 
       model.traverse((child) => {
         const mesh = child as THREE.Mesh;
@@ -461,19 +516,17 @@ const Mic = () => {
     waveContainer.appendChild(waveRenderer.domElement);
 
     const waveState = { amplitude: 0, phase: 0 };
+    const isMobileWave = waveContainer.clientWidth < 768;
 
     const waveLines = WAVE_CONFIG.waves.map((w) => {
       const geometry = new THREE.BufferGeometry();
       const positions = new Float32Array(WAVE_CONFIG.pointsCount * 3);
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-      const material = new THREE.LineBasicMaterial({
-        color: w.color,
-        transparent: true,
-        opacity: w.opacity,
-      });
+      const opacity = isMobileWave ? Math.min(w.opacity * 1.4, 1) : w.opacity;
+      const material = new THREE.LineBasicMaterial({ color: w.color, transparent: true, opacity });
       const line = new THREE.Line(geometry, material);
       waveScene.add(line);
-      return { ...w, line, geometry, positions };
+      return { freq: w.freq, phaseOffset: w.phaseOffset, ampMult: w.ampMult, line, geometry, positions };
     });
 
     const updateWaves = () => {
@@ -554,7 +607,7 @@ const Mic = () => {
           speakerControls.update();
         } else if (speakerModelRef.current) {
           const isMobSpkAnim = speakerContainer.clientWidth < 768;
-          const baseRotY = isMobSpkAnim ? 0.65 : speakerParamsRef.current.rotY;
+          const baseRotY = isMobSpkAnim ? speakerMobileParamsRef.current.rotY : speakerParamsRef.current.rotY;
           const targetY = baseRotY + mouseXRef.current * 0.4;
           speakerModelRef.current.rotation.y +=
             (targetY - speakerModelRef.current.rotation.y) * 0.01;
@@ -613,12 +666,11 @@ const Mic = () => {
       }
       if (speakerModelRef.current) {
         const sp = speakerParamsRef.current;
-        speakerModelRef.current.position.set(
-          isMobile ? -0.4 : sp.posX,
-          isMobile ? 1.4 : sp.posY,
-          sp.posZ,
-        );
-        if (isMobile) speakerModelRef.current.rotation.y = 0.65;
+        const smp = speakerMobileParamsRef.current;
+        const srp = isMobile ? smp : sp;
+        speakerModelRef.current.position.set(srp.posX, srp.posY, srp.posZ);
+        speakerModelRef.current.scale.setScalar(speakerBaseScaleRef.current * srp.scale);
+        if (isMobile) speakerModelRef.current.rotation.y = smp.rotY;
       }
     });
     ro.observe(container);
@@ -633,40 +685,13 @@ const Mic = () => {
     const words3 = text3Ref.current?.querySelectorAll<HTMLElement>('.word3') ?? [];
     const words4 = speakerTextRef.current?.querySelectorAll<HTMLElement>('.word4') ?? [];
 
-    // UCHWYĆ entrance mirrors its exit: drops from above, opacity + blur fade
-    gsap.set(words, {
-      yPercent: -120,
-      opacity: 0,
-      filter: 'blur(10px)',
-    });
-    gsap.set([...Array.from(words2), ...Array.from(words3)], {
-      yPercent: 115,
-      skewY: 6,
-      filter: 'blur(8px)',
-      opacity: 0,
-    });
-    // Speaker headline (left) starts dropped from above like UCHWYĆ
-    gsap.set(words4, {
-      yPercent: -120,
-      opacity: 0,
-      filter: 'blur(10px)',
-    });
-    // Mic entrance mirrors its exit: scale up from 0.92, blur + brightness fade
-    gsap.set(container, {
-      opacity: 0,
-      filter: 'blur(20px) brightness(0.4)',
-      scale: 0.92,
-    });
-    // Wave + speaker canvases are hidden until their cue.
+    gsap.set(words, { yPercent: -120, opacity: 0 });
+    gsap.set([...Array.from(words2), ...Array.from(words3)], { yPercent: 115, skewY: 6, opacity: 0 });
+    gsap.set(words4, { yPercent: -120, opacity: 0 });
+    gsap.set(container, { opacity: 0, scale: 0.92 });
     gsap.set(waveContainer, { opacity: 0 });
-    gsap.set(speakerContainer, {
-      opacity: 0,
-      filter: 'blur(20px) brightness(0.4)',
-      scale: 0.92,
-    });
-    // Cennik hidden until the speaker leaves. autoAlpha → visibility:hidden so
-    // it never intercepts clicks while the 3D phases play.
-    gsap.set(pricingRef.current, { autoAlpha: 0, filter: 'blur(20px)', yPercent: 5 });
+    gsap.set(speakerContainer, { opacity: 0, scale: 0.92 });
+    gsap.set(pricingRef.current, { autoAlpha: 0, yPercent: 5 });
 
     // Phase 1 — runs while the section is scrolling INTO view (no pin).
     // scrub:true (no smoothing tail) so it never fights micTl over `container`
@@ -686,14 +711,12 @@ const Mic = () => {
       .to(words, {
         yPercent: 0,
         opacity: 1,
-        filter: 'blur(0px)',
         stagger: 0.06,
         duration: 0.55,
         ease: 'power2.out',
       })
       .to(container, {
         opacity: 1,
-        filter: 'blur(0px) brightness(1)',
         scale: 1,
         duration: 0.7,
         ease: 'power2.out',
@@ -706,7 +729,7 @@ const Mic = () => {
       scrollTrigger: {
         trigger: sectionRef.current,
         start: 'top top',
-        end: '+=850%',
+        end: '+=500%',
         scrub: 1,
         pin: true,
         anticipatePin: 1,
@@ -720,7 +743,6 @@ const Mic = () => {
       // Mic + UCHWYĆ text exit; wave fades in at the same time
       .to(container, {
         opacity: 0,
-        filter: 'blur(20px) brightness(0.4)',
         scale: 0.92,
         duration: 0.7,
         ease: 'power2.in',
@@ -728,7 +750,6 @@ const Mic = () => {
       .to(words, {
         yPercent: -120,
         opacity: 0,
-        filter: 'blur(10px)',
         stagger: 0.06,
         duration: 0.55,
         ease: 'power2.in',
@@ -742,17 +763,14 @@ const Mic = () => {
       .to(words2, {
         yPercent: 0,
         skewY: 0,
-        filter: 'blur(0px)',
         opacity: 1,
         stagger: 0.15,
         duration: 0.6,
         ease: 'power3.out',
       }, '-=0.15')
-      // POCZUJ KAŻDY TON reveals (bottom-right)
       .to(words3, {
         yPercent: 0,
         skewY: 0,
-        filter: 'blur(0px)',
         opacity: 1,
         stagger: 0.15,
         duration: 0.6,
@@ -769,37 +787,27 @@ const Mic = () => {
       .to([words2, words3], {
         yPercent: 115,
         skewY: 6,
-        filter: 'blur(8px)',
         opacity: 0,
         stagger: 0.06,
         duration: 0.55,
         ease: 'power2.in',
       }, '<')
-      // Speaker enters only AFTER the wave has fully faded out (no '<' here,
-      // so it starts at the end of the wave-exit tween).
       .to(speakerContainer, {
         opacity: 1,
-        filter: 'blur(0px) brightness(1)',
         scale: 1,
         duration: 0.7,
         ease: 'power2.out',
       })
-      // POCZUJ POTĘGĘ BASU reveals (left) — enters together with the speaker,
-      // exactly like the mic + its headline (textTl uses '<').
       .to(words4, {
         yPercent: 0,
         opacity: 1,
-        filter: 'blur(0px)',
         stagger: 0.06,
         duration: 0.55,
         ease: 'power2.out',
       }, '<')
-      // Very short beat, then the speaker exits with the SAME effect as the mic
-      // (blur + brightness down + scale 0.92, headline flies up).
       .to({}, { duration: 0.3 })
       .to(speakerContainer, {
         opacity: 0,
-        filter: 'blur(20px) brightness(0.4)',
         scale: 0.92,
         duration: 0.7,
         ease: 'power2.in',
@@ -807,15 +815,12 @@ const Mic = () => {
       .to(words4, {
         yPercent: -120,
         opacity: 0,
-        filter: 'blur(10px)',
         stagger: 0.06,
         duration: 0.55,
         ease: 'power2.in',
       }, '<')
-      // ── Cennik takes the same stage once the speaker is gone ──────────
       .to(pricingRef.current, {
         autoAlpha: 1,
-        filter: 'blur(0px)',
         yPercent: 0,
         duration: 0.8,
         ease: 'power2.out',
@@ -1080,15 +1085,15 @@ const Mic = () => {
                   ].map(({ label, key, min, max, step }) => (
                     <div key={`mob-spk-${key}`} className="px-1">
                       <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
-                        {label} <span>{(speakerUiParams[key] as number).toFixed(step < 1 ? 2 : 0)}</span>
+                        {label} <span>{(speakerMobileUiParams[key] as number).toFixed(step < 1 ? 2 : 0)}</span>
                       </div>
                       <input
                         type="range"
                         min={min}
                         max={max}
                         step={step}
-                        value={speakerUiParams[key] as number}
-                        onChange={(e) => updateSpeakerParams({ [key]: parseFloat(e.target.value) })}
+                        value={speakerMobileUiParams[key] as number}
+                        onChange={(e) => updateSpeakerMobileParams({ [key]: parseFloat(e.target.value) })}
                         className="w-full accent-white"
                       />
                     </div>
@@ -1098,8 +1103,8 @@ const Mic = () => {
                       <span className="text-[9px] text-white/40 font-mono uppercase">{key}</span>
                       <input
                         type="color"
-                        value={speakerUiParams[key]}
-                        onChange={(e) => updateSpeakerParams({ [key]: e.target.value })}
+                        value={speakerMobileUiParams[key]}
+                        onChange={(e) => updateSpeakerMobileParams({ [key]: e.target.value })}
                         className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
                       />
                     </div>
