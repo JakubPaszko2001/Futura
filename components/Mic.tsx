@@ -11,6 +11,7 @@ import PricingPanel from './PricingPanel';
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
+  ScrollTrigger.config({ ignoreMobileResize: true });
 }
 
 // Speaker dev panel (Studio Config: position/scale/colour sliders + preview).
@@ -632,10 +633,14 @@ const Mic = () => {
     animate();
 
     // Resize observer — more reliable than window resize
+    let lastResizeW = 0;
     const ro = new ResizeObserver(() => {
       if (!container) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
+      // Mobile browser chrome (URL bar / nav) changes only height — skip those.
+      if (Math.abs(w - lastResizeW) < 2) return;
+      lastResizeW = w;
       const isMobile = w < 768;
 
       camera.aspect = w / h;
