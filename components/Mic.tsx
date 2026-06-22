@@ -69,7 +69,7 @@ const DEFAULT_PARAMS_MOBILE: MicParams = {
   ambientColor: '#222222',
   micColor: '#3b3b3b',
   posX: 1,
-  posY: -2.6,
+  posY: -2.7,
   posZ: 2.2,
   rotY: 0.2,
   scale: 1.3,
