@@ -287,6 +287,7 @@ const Mic = () => {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
+    renderer.domElement.style.touchAction = 'pan-y';
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -374,6 +375,7 @@ const Mic = () => {
     speakerRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     speakerRenderer.toneMapping = THREE.ACESFilmicToneMapping;
     speakerRenderer.toneMappingExposure = 1.2;
+    speakerRenderer.domElement.style.touchAction = 'pan-y';
     speakerContainer.appendChild(speakerRenderer.domElement);
 
     // Orbit controls — only enabled in preview so the speaker can be found
@@ -903,7 +905,7 @@ const Mic = () => {
         ref={containerRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        className="absolute inset-0 z-[10] cursor-crosshair"
+        className="absolute inset-0 z-[10] cursor-crosshair pointer-events-none md:pointer-events-auto"
       />
 
       {/* Speaker canvas — top 3D layer, revealed after the wave */}
