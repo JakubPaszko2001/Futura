@@ -15,7 +15,7 @@ if (typeof window !== 'undefined') {
 
 // Speaker dev panel (Studio Config: position/scale/colour sliders + preview).
 // Disabled now that the speaker is positioned — flip to true to bring it back.
-const SHOW_CONFIG: boolean = false;
+const SHOW_CONFIG: boolean = true;
 
 const WAVE_CONFIG = {
   pointsCount: 200,
@@ -59,6 +59,22 @@ const DEFAULT_PARAMS: MicParams = {
   scale: 1.0,
 };
 
+const DEFAULT_PARAMS_MOBILE: MicParams = {
+  fov: 38,
+  intensity: 2100,
+  roughness: 0.25,
+  metalness: 0.8,
+  mainColor: '#8000ff',
+  sideColor: '#8000ff',
+  ambientColor: '#222222',
+  micColor: '#3b3b3b',
+  posX: 1,
+  posY: -2.6,
+  posZ: 2.2,
+  rotY: 0.2,
+  scale: 1.3,
+};
+
 // Speaker shares the mic's look. Starts centred at the orbit target so it is
 // guaranteed to be in frame — fine-tune position/scale from the panel.
 // Colours/material/lighting are kept identical to the mic on purpose.
@@ -88,15 +104,18 @@ const Mic = () => {
   const speakerContainerRef = useRef<HTMLDivElement>(null);
   const speakerTextRef = useRef<HTMLHeadingElement>(null);
   const pricingRef = useRef<HTMLDivElement>(null);
-  const [isUiHidden, setIsUiHidden] = useState(true);   // config closed by default
+  const [isUiHidden, setIsUiHidden] = useState(true);
   const [isSpeakerPreview, setIsSpeakerPreview] = useState(false);
+  const [mobileConfigTab, setMobileConfigTab] = useState<'mic' | 'speaker'>('mic');
 
   // UI state for controlled inputs — separate from live params
   const [speakerUiParams, setSpeakerUiParams] = useState<MicParams>(SPEAKER_PARAMS);
+  const [micMobileUiParams, setMicMobileUiParams] = useState<MicParams>(DEFAULT_PARAMS_MOBILE);
 
   // Live refs — read inside rAF without stale closures, zero re-renders
   const paramsRef = useRef<MicParams>(DEFAULT_PARAMS);
   const speakerParamsRef = useRef<MicParams>(SPEAKER_PARAMS);
+  const micMobileParamsRef = useRef<MicParams>(DEFAULT_PARAMS_MOBILE);
   const mouseXRef = useRef(0);
 
   // Three.js object refs
@@ -152,6 +171,49 @@ const Mic = () => {
       }
       if (patch.micColor !== undefined || patch.roughness !== undefined || patch.metalness !== undefined) {
         speakerModelRef.current.traverse((child) => {
+          const mesh = child as THREE.Mesh;
+          if (mesh.isMesh) {
+            const mat = mesh.material as THREE.MeshStandardMaterial;
+            mat.color.set(p.micColor);
+            mat.roughness = p.roughness;
+            mat.metalness = p.metalness;
+          }
+        });
+      }
+    }
+  }, []);
+
+  const updateMicMobileParams = useCallback((patch: Partial<MicParams>) => {
+    const next = { ...micMobileParamsRef.current, ...patch };
+    micMobileParamsRef.current = next;
+    setMicMobileUiParams(next);
+
+    const p = next;
+    if (mainLightRef.current) {
+      mainLightRef.current.intensity = p.intensity;
+      mainLightRef.current.color.set(p.mainColor);
+    }
+    if (sideLightRef.current) {
+      sideLightRef.current.intensity = p.intensity;
+      sideLightRef.current.color.set(p.sideColor);
+    }
+    if (ambientLightRef.current) {
+      ambientLightRef.current.color.set(p.ambientColor);
+    }
+    if (cameraRef.current && patch.fov !== undefined) {
+      cameraRef.current.fov = p.fov;
+      cameraRef.current.updateProjectionMatrix();
+    }
+    if (currentModelRef.current) {
+      if (patch.posX !== undefined || patch.posY !== undefined || patch.posZ !== undefined) {
+        currentModelRef.current.position.set(p.posX, p.posY, p.posZ);
+      }
+      if (patch.scale !== undefined) {
+        const s = baseScaleRef.current * p.scale;
+        currentModelRef.current.scale.setScalar(s);
+      }
+      if (patch.micColor !== undefined || patch.roughness !== undefined || patch.metalness !== undefined) {
+        currentModelRef.current.traverse((child) => {
           const mesh = child as THREE.Mesh;
           if (mesh.isMesh) {
             const mat = mesh.material as THREE.MeshStandardMaterial;
@@ -268,15 +330,12 @@ const Mic = () => {
       const maxDim = Math.max(size.x, size.y, size.z);
       const base = maxDim > 0 ? 4 / maxDim : 1;
       baseScaleRef.current = base;
-      model.scale.setScalar(base * paramsRef.current.scale);
 
       const isMobMic = container.clientWidth < 768;
-      model.position.set(
-        isMobMic ? 1.2 : paramsRef.current.posX,
-        isMobMic ? -1.8 : paramsRef.current.posY,
-        paramsRef.current.posZ,
-      );
-      model.rotation.y = paramsRef.current.rotY;
+      const initParams = isMobMic ? micMobileParamsRef.current : paramsRef.current;
+      model.scale.setScalar(base * initParams.scale);
+      model.position.set(initParams.posX, initParams.posY, initParams.posZ);
+      model.rotation.y = initParams.rotY;
 
       // Apply materials
       model.traverse((child) => {
@@ -477,9 +536,11 @@ const Mic = () => {
       // ── Mic ──────────────────────────────────────────────────────────
       if (isVisible(container)) {
         if (currentModelRef.current) {
-          const targetY = paramsRef.current.rotY + mouseXRef.current * 0.4;
+          const isMobAnim = container.clientWidth < 768;
+          const baseRotY = isMobAnim ? micMobileParamsRef.current.rotY : paramsRef.current.rotY;
+          const targetY = baseRotY + mouseXRef.current * 0.4;
           currentModelRef.current.rotation.y +=
-            (targetY - currentModelRef.current.rotation.y) * 0.01; // faster lerp
+            (targetY - currentModelRef.current.rotation.y) * 0.01;
         }
         renderer.render(scene, camera);
       }
@@ -542,11 +603,11 @@ const Mic = () => {
 
       if (currentModelRef.current) {
         const p = paramsRef.current;
-        currentModelRef.current.position.set(
-          isMobile ? 1.2 : p.posX,
-          isMobile ? -1.8 : p.posY,
-          p.posZ,
-        );
+        const mp = micMobileParamsRef.current;
+        const rp = isMobile ? mp : p;
+        currentModelRef.current.position.set(rp.posX, rp.posY, rp.posZ);
+        currentModelRef.current.scale.setScalar(baseScaleRef.current * rp.scale);
+        if (isMobile) currentModelRef.current.rotation.y = mp.rotY;
       }
       if (speakerModelRef.current) {
         const sp = speakerParamsRef.current;
@@ -920,7 +981,135 @@ const Mic = () => {
             {isUiHidden ? 'Config' : 'Close'}
           </button>
 
-          {/* Sidebar */}
+          {/* Mobile config button */}
+          <button
+            onClick={() => setIsUiHidden((v) => !v)}
+            className="block md:hidden fixed bottom-4 right-4 z-[110] bg-white/10 backdrop-blur-md text-white border border-white/20 px-5 py-2 rounded-full text-[10px] uppercase tracking-[0.2em] active:scale-95"
+          >
+            {isUiHidden ? 'Config' : 'Close'}
+          </button>
+
+          {/* Mobile bottom sheet */}
+          <div
+            className={`block md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-black/95 backdrop-blur-3xl border-t border-white/10 transition-transform duration-500 ease-in-out overflow-y-auto max-h-[70vh] ${isUiHidden ? 'translate-y-full' : 'translate-y-0'}`}
+          >
+            <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mt-3 mb-1" />
+            <div className="p-5 space-y-5">
+              <h2 className="text-white text-[12px] font-light uppercase tracking-[0.3em] text-center">
+                Studio Config
+              </h2>
+
+              {/* Tab toggle */}
+              <div className="flex rounded-full border border-white/20 overflow-hidden">
+                <button
+                  onClick={() => setMobileConfigTab('mic')}
+                  className={`flex-1 py-2 text-[10px] uppercase tracking-[0.2em] transition-all ${mobileConfigTab === 'mic' ? 'bg-[#8000ff] text-white' : 'text-white/40'}`}
+                >
+                  Mic
+                </button>
+                <button
+                  onClick={() => setMobileConfigTab('speaker')}
+                  className={`flex-1 py-2 text-[10px] uppercase tracking-[0.2em] transition-all ${mobileConfigTab === 'speaker' ? 'bg-[#8000ff] text-white' : 'text-white/40'}`}
+                >
+                  Speaker
+                </button>
+              </div>
+
+              {/* Mic mobile controls */}
+              {mobileConfigTab === 'mic' && (
+                <>
+                  {[
+                    { label: 'Rotation Base', key: 'rotY' as const, min: -Math.PI, max: Math.PI, step: 0.001 },
+                    { label: 'Position X', key: 'posX' as const, min: -15, max: 15, step: 0.01 },
+                    { label: 'Position Y', key: 'posY' as const, min: -15, max: 15, step: 0.01 },
+                    { label: 'Position Z', key: 'posZ' as const, min: -15, max: 15, step: 0.01 },
+                    { label: 'Scale', key: 'scale' as const, min: 0.05, max: 20, step: 0.01 },
+                    { label: 'Light Intensity', key: 'intensity' as const, min: 0, max: 5000, step: 10 },
+                    { label: 'Roughness', key: 'roughness' as const, min: 0, max: 1, step: 0.01 },
+                    { label: 'Metalness', key: 'metalness' as const, min: 0, max: 1, step: 0.01 },
+                  ].map(({ label, key, min, max, step }) => (
+                    <div key={`mob-mic-${key}`} className="px-1">
+                      <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
+                        {label} <span>{(micMobileUiParams[key] as number).toFixed(step < 1 ? 2 : 0)}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={min}
+                        max={max}
+                        step={step}
+                        value={micMobileUiParams[key] as number}
+                        onChange={(e) => updateMicMobileParams({ [key]: parseFloat(e.target.value) })}
+                        className="w-full accent-white"
+                      />
+                    </div>
+                  ))}
+                  {(['mainColor', 'sideColor', 'micColor', 'ambientColor'] as const).map((key) => (
+                    <div key={`mob-mic-${key}`} className="px-1 flex items-center justify-between">
+                      <span className="text-[9px] text-white/40 font-mono uppercase">{key}</span>
+                      <input
+                        type="color"
+                        value={micMobileUiParams[key]}
+                        onChange={(e) => updateMicMobileParams({ [key]: e.target.value })}
+                        className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
+                      />
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Speaker mobile controls */}
+              {mobileConfigTab === 'speaker' && (
+                <>
+                  <button
+                    onClick={() => setIsSpeakerPreview((v) => !v)}
+                    className={`w-full py-3 rounded-full text-[10px] uppercase tracking-[0.2em] border transition-all active:scale-95 ${isSpeakerPreview ? 'bg-[#8000ff] text-white border-[#8000ff]' : 'bg-white/10 text-white border-white/20'}`}
+                  >
+                    {isSpeakerPreview ? 'Preview: ON' : 'Preview Speaker'}
+                  </button>
+                  {[
+                    { label: 'Rotation Base', key: 'rotY' as const, min: -Math.PI, max: Math.PI, step: 0.001 },
+                    { label: 'Position X', key: 'posX' as const, min: -15, max: 15, step: 0.01 },
+                    { label: 'Position Y', key: 'posY' as const, min: -15, max: 15, step: 0.01 },
+                    { label: 'Position Z', key: 'posZ' as const, min: -15, max: 15, step: 0.01 },
+                    { label: 'Scale', key: 'scale' as const, min: 0.05, max: 20, step: 0.01 },
+                    { label: 'Light Intensity', key: 'intensity' as const, min: 0, max: 5000, step: 10 },
+                    { label: 'Roughness', key: 'roughness' as const, min: 0, max: 1, step: 0.01 },
+                    { label: 'Metalness', key: 'metalness' as const, min: 0, max: 1, step: 0.01 },
+                  ].map(({ label, key, min, max, step }) => (
+                    <div key={`mob-spk-${key}`} className="px-1">
+                      <div className="flex justify-between text-[9px] text-white/40 mb-2 font-mono uppercase">
+                        {label} <span>{(speakerUiParams[key] as number).toFixed(step < 1 ? 2 : 0)}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={min}
+                        max={max}
+                        step={step}
+                        value={speakerUiParams[key] as number}
+                        onChange={(e) => updateSpeakerParams({ [key]: parseFloat(e.target.value) })}
+                        className="w-full accent-white"
+                      />
+                    </div>
+                  ))}
+                  {(['mainColor', 'sideColor', 'micColor', 'ambientColor'] as const).map((key) => (
+                    <div key={`mob-spk-${key}`} className="px-1 flex items-center justify-between">
+                      <span className="text-[9px] text-white/40 font-mono uppercase">{key}</span>
+                      <input
+                        type="color"
+                        value={speakerUiParams[key]}
+                        onChange={(e) => updateSpeakerParams({ [key]: e.target.value })}
+                        className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
+                      />
+                    </div>
+                  ))}
+                </>
+              )}
+
+              <div className="h-4" />
+            </div>
+          </div>
+
+          {/* Desktop Sidebar */}
           <div
             className={`hidden md:block absolute top-0 right-0 h-full w-72 bg-black/90 backdrop-blur-3xl border-l border-white/10 p-8 z-[100] transition-transform duration-700 ease-in-out overflow-y-auto ${isUiHidden ? 'translate-x-full' : 'translate-x-0'
               }`}
